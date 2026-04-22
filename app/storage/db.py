@@ -1,8 +1,8 @@
-"""SQLite хранилище для токенов пользователей."""
+"""SQLite хранилище для токенов пользователей и истории плейлистов."""
 import sqlite3
 import logging
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -11,10 +11,10 @@ DB_PATH = Path(__file__).parent.parent.parent / "users.db"
 
 
 def init_db():
-    """Инициализировать БД и создать таблицу users."""
+    """Инициализировать БД: таблицы users и playlists."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             telegram_user_id INTEGER PRIMARY KEY,
@@ -26,7 +26,25 @@ def init_db():
             updated_at TEXT NOT NULL
         )
     """)
-    
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS playlists (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            telegram_user_id INTEGER NOT NULL,
+            spotify_playlist_id TEXT,
+            name TEXT NOT NULL,
+            url TEXT,
+            source TEXT NOT NULL,
+            prompt TEXT,
+            tracks_count INTEGER,
+            created_at TEXT NOT NULL
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_playlists_user_created
+        ON playlists(telegram_user_id, created_at DESC)
+    """)
+
     conn.commit()
     conn.close()
     logger.info(f"База данных инициализирована: {DB_PATH}")
@@ -85,23 +103,32 @@ def save_user(
 def update_tokens(
     telegram_user_id: int,
     access_token: str,
-    token_expires_at: int
+    token_expires_at: int,
+    refresh_token: str | None = None,
 ):
-    """Обновить access_token и expires_at."""
+    """Обновить access_token, expires_at и (опционально) refresh_token."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    
+
     now = datetime.utcnow().isoformat()
-    
-    cursor.execute("""
-        UPDATE users
-        SET access_token = ?, token_expires_at = ?, updated_at = ?
-        WHERE telegram_user_id = ?
-    """, (access_token, token_expires_at, now, telegram_user_id))
-    
+
+    if refresh_token:
+        cursor.execute("""
+            UPDATE users
+            SET access_token = ?, token_expires_at = ?, refresh_token = ?, updated_at = ?
+            WHERE telegram_user_id = ?
+        """, (access_token, token_expires_at, refresh_token, now, telegram_user_id))
+    else:
+        cursor.execute("""
+            UPDATE users
+            SET access_token = ?, token_expires_at = ?, updated_at = ?
+            WHERE telegram_user_id = ?
+        """, (access_token, token_expires_at, now, telegram_user_id))
+
     conn.commit()
     conn.close()
-    logger.info(f"Токены обновлены: telegram_user_id={telegram_user_id}")
+    logger.info("Токены обновлены: telegram_user_id=%s (refresh_token %s)",
+                telegram_user_id, "обновлён" if refresh_token else "без изменений")
 
 
 def delete_user(telegram_user_id: int) -> bool:
@@ -119,3 +146,70 @@ def delete_user(telegram_user_id: int) -> bool:
         logger.info(f"Пользователь удалён: telegram_user_id={telegram_user_id}")
     
     return deleted
+
+
+def add_playlist(
+    telegram_user_id: int,
+    name: str,
+    source: str,
+    *,
+    spotify_playlist_id: Optional[str] = None,
+    url: Optional[str] = None,
+    prompt: Optional[str] = None,
+    tracks_count: Optional[int] = None,
+) -> int:
+    """Записать факт создания плейлиста в историю. Возвращает id строки."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    now = datetime.utcnow().isoformat()
+    cursor.execute(
+        """
+        INSERT INTO playlists (
+            telegram_user_id, spotify_playlist_id, name, url,
+            source, prompt, tracks_count, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (telegram_user_id, spotify_playlist_id, name, url,
+         source, prompt, tracks_count, now),
+    )
+    row_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    logger.info(
+        "История плейлистов: добавлен id=%s (user=%s, source=%s)",
+        row_id, telegram_user_id, source,
+    )
+    return row_id
+
+
+def get_playlist(playlist_id: int) -> Optional[Dict[str, Any]]:
+    """Получить один плейлист по id."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM playlists WHERE id = ?", (playlist_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def list_playlists(telegram_user_id: int, limit: int = 5) -> List[Dict[str, Any]]:
+    """Вернуть последние N плейлистов пользователя (новые сверху)."""
+    limit = max(1, min(int(limit), 50))
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT id, spotify_playlist_id, name, url, source, prompt,
+               tracks_count, created_at
+        FROM playlists
+        WHERE telegram_user_id = ?
+        ORDER BY datetime(created_at) DESC, id DESC
+        LIMIT ?
+        """,
+        (telegram_user_id, limit),
+    )
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows

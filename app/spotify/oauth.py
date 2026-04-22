@@ -10,152 +10,170 @@ from urllib.parse import urlencode
 import httpx
 
 from app.config import settings
+from app.storage import db
 
 logger = logging.getLogger(__name__)
 
-# Хранилище PKCE verifier и state в памяти (TTL 10 минут)
 _pkce_store: Dict[str, Dict] = {}
 _STATE_TTL = 600  # 10 минут
 
 
 def generate_pkce() -> tuple[str, str]:
     """Сгенерировать code_verifier и code_challenge для PKCE."""
-    # Code verifier: случайная строка 43-128 символов
     code_verifier = base64.urlsafe_b64encode(
         secrets.token_bytes(32)
     ).decode('utf-8').rstrip('=')
-    
-    # Code challenge: SHA256(code_verifier), base64url
+
     code_challenge = base64.urlsafe_b64encode(
         hashlib.sha256(code_verifier.encode('utf-8')).digest()
     ).decode('utf-8').rstrip('=')
-    
+
     return code_verifier, code_challenge
 
 
-def generate_state(telegram_user_id: int) -> str:
-    """Сгенерировать state с привязкой к telegram_user_id."""
+def create_state(telegram_user_id: int) -> str:
+    """Сгенерировать state с привязкой к telegram_user_id и сохранить PKCE."""
     state = secrets.token_urlsafe(32)
     code_verifier, code_challenge = generate_pkce()
-    
+
     _pkce_store[state] = {
         'telegram_user_id': telegram_user_id,
         'code_verifier': code_verifier,
         'code_challenge': code_challenge,
-        'created_at': time.time()
+        'created_at': time.time(),
     }
-    
-    logger.info(f"Сгенерирован state для telegram_user_id={telegram_user_id}")
+
+    logger.info("Сгенерирован state для telegram_user_id=%s", telegram_user_id)
     return state
 
 
-def get_pkce_data(state: str) -> Optional[Dict]:
-    """Получить PKCE данные по state (с проверкой TTL)."""
-    if state not in _pkce_store:
+def pop_pkce_data(state: str) -> Optional[Dict]:
+    """Извлечь и удалить PKCE-данные по state (с проверкой TTL).
+
+    Возвращает dict с ключами telegram_user_id, code_verifier, code_challenge
+    или None, если state невалиден / истёк.
+    """
+    data = _pkce_store.pop(state, None)
+    if data is None:
         return None
-    
-    data = _pkce_store[state]
+
     age = time.time() - data['created_at']
-    
     if age > _STATE_TTL:
-        logger.warning(f"State истёк: state={state}, age={age:.1f}s")
-        del _pkce_store[state]
+        logger.warning("State истёк: age=%.1fs", age)
         return None
-    
+
     return data
-
-
-def clear_state(state: str):
-    """Удалить state из хранилища."""
-    if state in _pkce_store:
-        del _pkce_store[state]
 
 
 def get_authorization_url(telegram_user_id: int) -> str:
     """Получить URL для авторизации Spotify."""
-    state = generate_state(telegram_user_id)
-    
-    # Получить code_challenge из хранилища (уже создан в generate_state)
+    state = create_state(telegram_user_id)
     pkce_data = _pkce_store[state]
-    code_challenge = pkce_data['code_challenge']
-    
+
     params = {
         'response_type': 'code',
         'client_id': settings.spotify_client_id,
         'redirect_uri': settings.spotify_redirect_uri,
         'code_challenge_method': 'S256',
-        'code_challenge': code_challenge,
+        'code_challenge': pkce_data['code_challenge'],
         'state': state,
-        'scope': 'playlist-modify-private playlist-modify-public'
+        'scope': 'playlist-modify-private playlist-modify-public',
     }
-    
+
     url = f"https://accounts.spotify.com/authorize?{urlencode(params)}"
-    logger.info(f"Сгенерирован auth URL для telegram_user_id={telegram_user_id}")
+    logger.info("Auth URL сгенерирован для telegram_user_id=%s", telegram_user_id)
     return url
 
 
-async def exchange_code_for_tokens(code: str, state: str) -> Optional[Dict]:
-    """Обменять authorization code на токены."""
-    pkce_data = get_pkce_data(state)
-    if not pkce_data:
-        logger.error(f"Неверный или истёкший state: {state}")
-        return None
-    
-    code_verifier = pkce_data['code_verifier']
-    
-    data = {
+async def exchange_code_for_tokens(code: str, code_verifier: str) -> Optional[Dict]:
+    """Обменять authorization code на токены (PKCE)."""
+    payload = {
         'grant_type': 'authorization_code',
         'code': code,
         'redirect_uri': settings.spotify_redirect_uri,
         'client_id': settings.spotify_client_id,
-        'code_verifier': code_verifier
+        'code_verifier': code_verifier,
     }
-    
-    async with httpx.AsyncClient() as client:
+
+    async with httpx.AsyncClient(timeout=15) as client:
         try:
-            response = await client.post(
+            resp = await client.post(
                 'https://accounts.spotify.com/api/token',
-                data=data,
-                headers={'Content-Type': 'application/x-www-form-urlencoded'}
+                data=payload,
+                headers={'Content-Type': 'application/x-www-form-urlencoded'},
             )
-            response.raise_for_status()
-            tokens = response.json()
-            
-            logger.info(f"Токены получены для state={state}")
-            clear_state(state)
-            
+            resp.raise_for_status()
+            tokens = resp.json()
+            logger.info("Токены получены")
             return tokens
         except httpx.HTTPStatusError as e:
-            logger.error(f"Ошибка обмена кода: {e.response.status_code} - {e.response.text}")
+            logger.error("Ошибка обмена кода: %s — %s", e.response.status_code, e.response.text)
             return None
         except Exception as e:
-            logger.error(f"Ошибка при обмене кода: {e}")
+            logger.error("Ошибка при обмене кода: %s", e)
             return None
+
+
+async def process_oauth_callback(code: str, state: str) -> tuple[bool, int | None, str | None, str | None]:
+    """Обработать OAuth callback (общая логика для HTTP и Telegram).
+
+    Возвращает (success, telegram_user_id, spotify_user_id, error_message).
+    """
+    from app.spotify.client import get_me
+
+    pkce_data = pop_pkce_data(state)
+    if pkce_data is None:
+        return False, None, None, "Невалидный или истёкший state"
+
+    telegram_user_id: int = pkce_data["telegram_user_id"]
+    code_verifier: str = pkce_data["code_verifier"]
+
+    tokens = await exchange_code_for_tokens(code, code_verifier)
+    if tokens is None:
+        return False, telegram_user_id, None, "Не удалось обменять код на токены"
+
+    access_token = tokens["access_token"]
+    refresh_tok = tokens["refresh_token"]
+    expires_at = int(time.time()) + tokens.get("expires_in", 3600)
+
+    me = await get_me(access_token)
+    if me is None:
+        return False, telegram_user_id, None, "Не удалось получить профиль Spotify"
+
+    db.save_user(
+        telegram_user_id=telegram_user_id,
+        spotify_user_id=me["id"],
+        access_token=access_token,
+        refresh_token=refresh_tok,
+        token_expires_at=expires_at,
+    )
+
+    logger.info("Пользователь авторизован: tg=%s spotify=%s", telegram_user_id, me["id"])
+    return True, telegram_user_id, me["id"], None
 
 
 async def refresh_access_token(refresh_token: str) -> Optional[Dict]:
     """Обновить access_token используя refresh_token."""
-    data = {
+    payload = {
         'grant_type': 'refresh_token',
         'refresh_token': refresh_token,
-        'client_id': settings.spotify_client_id
+        'client_id': settings.spotify_client_id,
     }
-    
-    async with httpx.AsyncClient() as client:
+
+    async with httpx.AsyncClient(timeout=15) as client:
         try:
-            response = await client.post(
+            resp = await client.post(
                 'https://accounts.spotify.com/api/token',
-                data=data,
-                headers={'Content-Type': 'application/x-www-form-urlencoded'}
+                data=payload,
+                headers={'Content-Type': 'application/x-www-form-urlencoded'},
             )
-            response.raise_for_status()
-            result = response.json()
-            
+            resp.raise_for_status()
+            result = resp.json()
             logger.info("Access token обновлён")
             return result
         except httpx.HTTPStatusError as e:
-            logger.error(f"Ошибка обновления токена: {e.response.status_code} - {e.response.text}")
+            logger.error("Ошибка обновления токена: %s — %s", e.response.status_code, e.response.text)
             return None
         except Exception as e:
-            logger.error(f"Ошибка при обновлении токена: {e}")
+            logger.error("Ошибка при обновлении токена: %s", e)
             return None

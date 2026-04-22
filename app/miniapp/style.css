@@ -1,0 +1,444 @@
+/* ── Telegram Theme Integration ────────────────────────────────── */
+:root {
+  --bg: var(--tg-theme-bg-color, #ffffff);
+  --text: var(--tg-theme-text-color, #000000);
+  --hint: var(--tg-theme-hint-color, #999999);
+  --link: var(--tg-theme-link-color, #2678b6);
+  --btn-bg: var(--tg-theme-button-color, #1db954);
+  --btn-text: var(--tg-theme-button-text-color, #ffffff);
+  --secondary-bg: var(--tg-theme-secondary-bg-color, #f0f0f0);
+  --section-bg: var(--tg-theme-section-bg-color, var(--secondary-bg));
+  --accent: #1db954;
+  --danger: #e74c3c;
+  --radius: 12px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding-bottom: 72px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Tab Bar ──────────────────────────────────────────────────── */
+.tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  background: var(--section-bg);
+  border-top: 1px solid rgba(128,128,128,.15);
+  z-index: 100;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.tab-bar button {
+  flex: 1;
+  border: none;
+  background: none;
+  padding: 8px 0 6px;
+  font-size: 11px;
+  color: var(--hint);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  transition: color .2s;
+}
+
+.tab-bar button.active {
+  color: var(--accent);
+}
+
+.tab-bar button .icon {
+  font-size: 20px;
+}
+
+/* ── Pages ────────────────────────────────────────────────────── */
+.page {
+  display: none;
+  padding: 16px;
+  animation: fadeIn .2s ease;
+}
+
+.page.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Header ───────────────────────────────────────────────────── */
+.page-header {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: var(--hint);
+  margin-bottom: 20px;
+}
+
+/* ── Cards ────────────────────────────────────────────────────── */
+.card {
+  background: var(--section-bg);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 10px;
+}
+
+.playlist-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.playlist-card .cover {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  background: rgba(128,128,128,.15);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  overflow: hidden;
+}
+
+.playlist-card .cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.playlist-card .info {
+  flex: 1;
+  min-width: 0;
+}
+
+.playlist-card .name {
+  font-weight: 600;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.playlist-card .meta {
+  font-size: 12px;
+  color: var(--hint);
+  margin-top: 2px;
+}
+
+.playlist-card .prompt-text {
+  font-size: 12px;
+  color: var(--link);
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.playlist-card .actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.playlist-card .actions a,
+.playlist-card .actions button {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn-open {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn-repeat {
+  background: rgba(128,128,128,.15);
+  color: var(--text);
+}
+
+/* ── Buttons ──────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border: none;
+  border-radius: var(--radius);
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  transition: opacity .2s;
+}
+
+.btn:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: var(--secondary-bg);
+  color: var(--text);
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+}
+
+.btn-small {
+  padding: 8px 14px;
+  font-size: 13px;
+  width: auto;
+}
+
+/* ── Input ────────────────────────────────────────────────────── */
+.input-group {
+  margin-bottom: 16px;
+}
+
+.input-group textarea,
+.input-group input {
+  width: 100%;
+  background: var(--section-bg);
+  color: var(--text);
+  border: 1px solid rgba(128,128,128,.2);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  font-size: 15px;
+  resize: vertical;
+  min-height: 48px;
+  font-family: inherit;
+}
+
+.input-group textarea:focus,
+.input-group input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* ── Presets Grid ─────────────────────────────────────────────── */
+.presets-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.preset-btn {
+  background: var(--section-bg);
+  border: 1px solid rgba(128,128,128,.15);
+  border-radius: var(--radius);
+  padding: 12px;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: center;
+  color: var(--text);
+  transition: background .2s;
+}
+
+.preset-btn:active {
+  background: rgba(128,128,128,.25);
+}
+
+/* ── Track list ───────────────────────────────────────────────── */
+.track-list {
+  list-style: none;
+}
+
+.track-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(128,128,128,.1);
+}
+
+.track-item .num {
+  font-size: 13px;
+  color: var(--hint);
+  width: 24px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.track-item .track-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.track-item .track-name {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.track-item .track-artist {
+  font-size: 12px;
+  color: var(--hint);
+}
+
+/* ── Loader ───────────────────────────────────────────────────── */
+.loader {
+  text-align: center;
+  padding: 40px 0;
+  color: var(--hint);
+}
+
+.spinner {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(128,128,128,.2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+  margin-bottom: 8px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Status ───────────────────────────────────────────────────── */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.status-connected {
+  background: rgba(29,185,84,.15);
+  color: var(--accent);
+}
+
+.status-disconnected {
+  background: rgba(231,76,60,.15);
+  color: var(--danger);
+}
+
+/* ── Preview section ──────────────────────────────────────────── */
+.preview-section {
+  display: none;
+}
+
+.preview-section.visible {
+  display: block;
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.preview-actions .btn {
+  flex: 1;
+}
+
+/* ── Empty state ──────────────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--hint);
+}
+
+.empty-state .icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+/* ── Toast ────────────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  background: var(--text);
+  color: var(--bg);
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  font-size: 14px;
+  z-index: 200;
+  transform: translateY(-120%);
+  transition: transform .3s ease;
+}
+
+.toast.show {
+  transform: translateY(0);
+}
+
+/* ── Search ───────────────────────────────────────────────────── */
+.search-results {
+  margin-top: 12px;
+}
+
+.search-result {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background .15s;
+}
+
+.search-result:active {
+  background: rgba(128,128,128,.15);
+}
+
+.search-result .sr-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.search-result .sr-name {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-result .sr-artist {
+  font-size: 12px;
+  color: var(--hint);
+}

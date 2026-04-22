@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CatchTheWave — Authorization</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex; justify-content: center; align-items: center;
+      min-height: 100vh; background: #f5f5f5; padding: 20px;
+    }
+    .box {
+      text-align: center; padding: 40px 30px; background: #fff;
+      border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,.08);
+      max-width: 400px; width: 100%;
+    }
+    .icon { font-size: 48px; margin-bottom: 16px; }
+    h1 { color: #1DB954; font-size: 22px; margin-bottom: 12px; }
+    p { color: #666; font-size: 15px; line-height: 1.5; margin-bottom: 20px; }
+    .steps { text-align: left; margin: 20px 0; padding: 16px; background: #f8f8f8; border-radius: 12px; }
+    .steps li { color: #444; font-size: 14px; margin-bottom: 8px; list-style: none; }
+    .steps li:last-child { margin-bottom: 0; }
+    .steps li::before { content: attr(data-step); display: inline-block; width: 24px; height: 24px;
+      background: #1DB954; color: #fff; border-radius: 50%; text-align: center;
+      line-height: 24px; font-size: 12px; font-weight: 700; margin-right: 8px; vertical-align: middle; }
+    .btn {
+      display: inline-block; padding: 14px 28px; border-radius: 12px;
+      font-size: 16px; font-weight: 600; text-decoration: none;
+      cursor: pointer; border: none; width: 100%; margin-bottom: 10px;
+    }
+    .btn-copy { background: #1DB954; color: #fff; }
+    .btn-copy:active { background: #1aa34a; }
+    .btn-tg { background: #2AABEE; color: #fff; }
+    .btn-tg:active { background: #229ed9; }
+    .btn-share { background: #7B61FF; color: #fff; }
+    .btn-share:active { background: #6a52e0; }
+    .copied { color: #1DB954; font-weight: 600; font-size: 14px; margin-top: 8px; display: none; }
+    .error { color: #e74c3c; }
+    #share-btn { display: none; }
+  </style>
+</head>
+<body>
+  <div class="box" id="main">
+    <div class="icon" id="status-icon">&#9989;</div>
+    <h1 id="status-title">Spotify authorized!</h1>
+    <p id="status-text">Send the authorization link to the bot to complete the connection.</p>
+
+    <button class="btn btn-share" id="share-btn" onclick="shareLink()">
+      Send to Telegram
+    </button>
+
+    <button class="btn btn-copy" id="copy-btn" onclick="copyLink()">
+      Copy Link
+    </button>
+    <div class="copied" id="copied-msg">Copied!</div>
+
+    <a class="btn btn-tg" id="tg-link" href="#">
+      Open Bot
+    </a>
+
+    <ol class="steps" id="steps">
+      <li data-step="1">Link copied to clipboard</li>
+      <li data-step="2">Open the bot in Telegram</li>
+      <li data-step="3">Paste the link in the chat</li>
+    </ol>
+  </div>
+
+  <div class="box" id="error-box" style="display:none">
+    <div class="icon">&#10060;</div>
+    <h1 class="error">Authorization Error</h1>
+    <p id="error-text"></p>
+  </div>
+
+  <script>
+    // Bot username — change to your bot's username
+    const BOT_USERNAME = "vibeplaylists_bot";
+
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const state = params.get("state");
+    const error = params.get("error");
+
+    const callbackUrl = window.location.href;
+    const tgLink = document.getElementById("tg-link");
+    tgLink.href = "https://t.me/" + BOT_USERNAME;
+
+    if (error) {
+      document.getElementById("main").style.display = "none";
+      document.getElementById("error-box").style.display = "";
+      document.getElementById("error-text").textContent = "Spotify returned an error: " + error;
+    } else if (!code || !state) {
+      document.getElementById("main").style.display = "none";
+      document.getElementById("error-box").style.display = "";
+      document.getElementById("error-text").textContent = "Missing authorization parameters. Try again.";
+    } else {
+      // Auto-copy on load
+      tryAutoCopy();
+
+      // Show share button on mobile if supported
+      if (navigator.share) {
+        document.getElementById("share-btn").style.display = "";
+      }
+    }
+
+    async function tryAutoCopy() {
+      try {
+        await navigator.clipboard.writeText(callbackUrl);
+        document.getElementById("copied-msg").style.display = "";
+        document.getElementById("copied-msg").textContent = "Link auto-copied!";
+      } catch (e) {
+        // Clipboard API may be blocked without user gesture
+      }
+    }
+
+    async function copyLink() {
+      try {
+        await navigator.clipboard.writeText(callbackUrl);
+        document.getElementById("copied-msg").style.display = "";
+        document.getElementById("copied-msg").textContent = "Copied!";
+      } catch (e) {
+        // Fallback
+        const ta = document.createElement("textarea");
+        ta.value = callbackUrl;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        document.getElementById("copied-msg").style.display = "";
+        document.getElementById("copied-msg").textContent = "Copied!";
+      }
+    }
+
+    async function shareLink() {
+      try {
+        await navigator.share({
+          title: "CatchTheWave Authorization",
+          text: callbackUrl,
+        });
+      } catch (e) {
+        copyLink();
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>CatchTheWave</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- ── Page: Home ─────────────────────────────────────────────── -->
+<div class="page active" id="page-home">
+  <div class="page-header">CatchTheWave</div>
+  <div class="page-subtitle">AI-powered Spotify playlists</div>
+
+  <div id="home-status" class="card" style="margin-bottom:20px">
+    <div class="loader"><div class="spinner"></div><br>Loading...</div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <button class="btn" onclick="App.switchTab('ai')">
+      <span>&#129302;</span> Create AI Playlist
+    </button>
+    <button class="btn btn-secondary" onclick="App.switchTab('top20')">
+      <span>&#128293;</span> Top-20 Global
+    </button>
+    <button class="btn btn-secondary" onclick="App.switchTab('search')">
+      <span>&#127925;</span> Add Song
+    </button>
+  </div>
+</div>
+
+<!-- ── Page: AI Playlist ─────────────────────────────────────── -->
+<div class="page" id="page-ai">
+  <div class="page-header">AI Playlist</div>
+  <div class="page-subtitle">Describe what you want to listen to</div>
+
+  <div id="ai-input-section">
+    <div class="presets-grid">
+      <button class="preset-btn" onclick="App.usePreset('chill')">&#128715; Chill</button>
+      <button class="preset-btn" onclick="App.usePreset('workout')">&#127947; Workout</button>
+      <button class="preset-btn" onclick="App.usePreset('focus')">&#129504; Focus</button>
+      <button class="preset-btn" onclick="App.usePreset('party')">&#127881; Party</button>
+      <button class="preset-btn" onclick="App.usePreset('ru_rap')">&#127479;&#127482; Russian Rap</button>
+      <button class="preset-btn" onclick="App.usePreset('retro_80')">&#128377; Retro 80s</button>
+    </div>
+
+    <div class="input-group">
+      <textarea id="ai-prompt" rows="3" placeholder="e.g. Calm evening music, lo-fi beats..."></textarea>
+    </div>
+
+    <button class="btn" id="ai-generate-btn" onclick="App.generatePlaylist()">
+      Generate Playlist
+    </button>
+  </div>
+
+  <div id="ai-loading" class="loader" style="display:none">
+    <div class="spinner"></div>
+    <br>AI is selecting tracks...
+  </div>
+
+  <div id="ai-preview" class="preview-section">
+    <div class="preview-header">
+      <div>
+        <div style="font-weight:700;font-size:17px">Preview</div>
+        <div id="ai-preview-info" style="font-size:13px;color:var(--hint)"></div>
+      </div>
+    </div>
+    <ul class="track-list" id="ai-track-list"></ul>
+    <div class="preview-actions">
+      <button class="btn" onclick="App.createAiPlaylist()">Create</button>
+      <button class="btn btn-secondary" onclick="App.regeneratePlaylist()">Regenerate</button>
+      <button class="btn btn-danger btn-small" onclick="App.cancelPreview()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Page: Top-20 ──────────────────────────────────────────── -->
+<div class="page" id="page-top20">
+  <div class="page-header">Top-20 Global</div>
+  <div class="page-subtitle">Current top tracks from Spotify charts</div>
+
+  <div id="top20-loading" class="loader">
+    <div class="spinner"></div>
+    <br>Loading chart...
+  </div>
+
+  <div id="top20-preview" class="preview-section">
+    <ul class="track-list" id="top20-track-list"></ul>
+    <div class="preview-actions">
+      <button class="btn" onclick="App.createTop20Playlist()">Create Playlist</button>
+      <button class="btn btn-secondary" onclick="App.switchTab('home')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Page: Search / Add Song ───────────────────────────────── -->
+<div class="page" id="page-search">
+  <div class="page-header">Add Song</div>
+  <div class="page-subtitle">Search for a track or paste a Spotify link</div>
+
+  <div class="input-group">
+    <input type="text" id="search-input" placeholder="Song name, artist, or Spotify link..."
+           onkeydown="if(event.key==='Enter')App.searchTrack()">
+  </div>
+  <button class="btn" onclick="App.searchTrack()">Search</button>
+
+  <div id="search-loading" class="loader" style="display:none">
+    <div class="spinner"></div>
+    <br>Searching...
+  </div>
+
+  <div class="search-results" id="search-results"></div>
+
+  <div id="search-preview" class="preview-section">
+    <div style="font-weight:700;font-size:17px;margin-bottom:12px">Selected Track</div>
+    <div id="search-track-info" class="card"></div>
+    <div class="preview-actions">
+      <button class="btn" onclick="App.createTrackPlaylist()">Create Playlist</button>
+      <button class="btn btn-secondary" onclick="App.cancelSearchPreview()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Page: History ──────────────────────────────────────────── -->
+<div class="page" id="page-history">
+  <div class="page-header">History</div>
+  <div class="page-subtitle">Your created playlists</div>
+
+  <div id="history-loading" class="loader">
+    <div class="spinner"></div>
+    <br>Loading...
+  </div>
+
+  <div id="history-list"></div>
+  <div id="history-empty" class="empty-state" style="display:none">
+    <div class="icon">&#128450;</div>
+    <div>No playlists yet</div>
+    <div style="margin-top:8px;font-size:13px">Create your first playlist and it will appear here</div>
+  </div>
+</div>
+
+<!-- ── Page: Profile ──────────────────────────────────────────── -->
+<div class="page" id="page-profile">
+  <div class="page-header">Profile</div>
+
+  <div id="profile-content" class="card">
+    <div class="loader"><div class="spinner"></div></div>
+  </div>
+
+  <div style="margin-top:16px">
+    <button class="btn btn-secondary" id="profile-connect-btn" style="display:none" onclick="App.connectSpotify()">
+      Connect Spotify
+    </button>
+  </div>
+</div>
+
+<!-- ── Tab Bar ────────────────────────────────────────────────── -->
+<nav class="tab-bar">
+  <button class="active" onclick="App.switchTab('home')">
+    <span class="icon">&#127968;</span>
+    Home
+  </button>
+  <button onclick="App.switchTab('ai')">
+    <span class="icon">&#129302;</span>
+    AI
+  </button>
+  <button onclick="App.switchTab('history')">
+    <span class="icon">&#128450;</span>
+    History
+  </button>
+  <button onclick="App.switchTab('profile')">
+    <span class="icon">&#128100;</span>
+    Profile
+  </button>
+</nav>
+
+<script src="api.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
