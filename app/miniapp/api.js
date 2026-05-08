@@ -3,7 +3,7 @@
  * Все запросы к /api/* с Telegram initData в заголовке.
  */
 const API = (() => {
-  const initData = window.Telegram?.WebApp?.initData || "";
+  const initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || "";
 
   async function request(url, options = {}) {
     const headers = {
@@ -39,6 +39,7 @@ const API = (() => {
         method: "POST",
         body: JSON.stringify({ query }),
       }),
+    disconnect: () => request("/api/disconnect", { method: "POST" }),
     addToPlaylist: ({ spotifyPlaylistId, uris }) =>
       request("/api/add-to-playlist", {
         method: "POST",

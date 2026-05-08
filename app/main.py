@@ -276,6 +276,13 @@ async def api_search(request: Request, x_telegram_init_data: str = Header(None))
     return {"tracks": tracks}
 
 
+@app.post("/api/disconnect")
+async def api_disconnect(x_telegram_init_data: str = Header(None)):
+    uid = _require_user(x_telegram_init_data)
+    db.delete_user(uid)
+    return {"ok": True}
+
+
 @app.post("/api/add-to-playlist")
 async def api_add_to_playlist(request: Request, x_telegram_init_data: str = Header(None)):
     uid = _require_user(x_telegram_init_data)

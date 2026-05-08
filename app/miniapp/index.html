@@ -185,19 +185,22 @@
   </div>
 </div>
 
-<!-- ── Page: Profile ──────────────────────────────────────────── -->
+<!-- ── Page: Account ──────────────────────────────────────────── -->
 <div class="page" id="page-profile">
   <div class="page-header">
-    <div class="page-title">Profile</div>
+    <div class="page-title">Account</div>
   </div>
 
   <div id="profile-content" class="card">
     <div class="loader"><div class="spinner"></div></div>
   </div>
 
-  <div style="margin-top:16px">
+  <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px">
     <button class="btn btn-ghost" id="profile-connect-btn" style="display:none" onclick="App.connectSpotify()">
       Connect Spotify
+    </button>
+    <button class="btn btn-ghost btn-danger-text" id="profile-disconnect-btn" style="display:none" onclick="App.disconnectSpotify()">
+      Disconnect Spotify
     </button>
   </div>
 </div>
@@ -218,7 +221,7 @@
   </button>
   <button onclick="App.switchTab('profile')">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-    <span>Profile</span>
+    <span>Account</span>
   </button>
 </nav>
 

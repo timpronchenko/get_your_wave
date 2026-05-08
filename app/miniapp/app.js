@@ -2,7 +2,7 @@
  * CatchTheWave — Telegram Mini App
  */
 const App = (() => {
-  const tg = window.Telegram?.WebApp;
+  const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
   let currentTab = "home";
   let aiPreview = null;
   let top20Tracks = null;
@@ -81,6 +81,7 @@ const App = (() => {
   async function loadProfile() {
     const el = document.getElementById("profile-content");
     const connectBtn = document.getElementById("profile-connect-btn");
+    const disconnectBtn = document.getElementById("profile-disconnect-btn");
     try {
       const data = await API.getMe();
       if (data.connected) {
@@ -90,14 +91,36 @@ const App = (() => {
           '<div style="margin-top:8px;font-size:13px;color:var(--hint)">ID: ' +
           escapeHtml(data.spotify_user_id) + "</div>";
         connectBtn.style.display = "none";
+        disconnectBtn.style.display = "block";
       } else {
         el.innerHTML =
           '<div style="font-weight:700;font-size:16px">Spotify Account</div>' +
           '<div style="margin-top:8px"><span class="status-badge status-disconnected">Not connected</span></div>';
         connectBtn.style.display = "block";
+        disconnectBtn.style.display = "none";
       }
     } catch (e) {
       el.innerHTML = '<div style="color:var(--danger)">Error loading profile</div>';
+    }
+  }
+
+  async function disconnectSpotify() {
+    var doDisconnect = function() {
+      return API.disconnect().then(function() {
+        toast("Spotify disconnected");
+        loadProfile();
+        loadHome();
+      }).catch(function(e) {
+        toast("Error: " + e.message);
+      });
+    };
+
+    if (tg && tg.showConfirm) {
+      tg.showConfirm("Disconnect Spotify account?", function(ok) {
+        if (ok) doDisconnect();
+      });
+    } else {
+      if (confirm("Disconnect Spotify account?")) doDisconnect();
     }
   }
 
@@ -459,6 +482,6 @@ const App = (() => {
     regeneratePlaylist, cancelPreview, createTop20Playlist,
     searchTrack, selectTrack, createTrackPlaylist, cancelSearchPreview,
     showPlaylistPicker, hidePlaylistPicker, addToExistingPlaylist,
-    connectSpotify, repeatFromHistory, deletePlaylist,
+    connectSpotify, disconnectSpotify, repeatFromHistory, deletePlaylist,
   };
 })();
