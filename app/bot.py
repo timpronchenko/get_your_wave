@@ -579,20 +579,12 @@ async def on_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await _handle_add_song_text(context.bot, chat_id, user.id, text, prompt_msg_id, user_data=context.user_data)
         return
 
-    if db.get_user(user.id):
-        await _safe_delete(context.bot, chat_id, user_msg_id)
-        await _handle_ai_playlist(
-            context.bot, chat_id, user.id, text, prompt_msg_id,
-            user_data=context.user_data,
-        )
-    else:
-        await _safe_send(
-            context.bot, chat_id,
-            "Подключите Spotify, чтобы начать. Нажмите /start",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔗 Подключить Spotify", callback_data="menu:connect")]
-            ]),
-        )
+    # Без активного режима — подсказка
+    await _safe_send(
+        context.bot, chat_id,
+        "Нажмите кнопку в меню, чтобы начать. /start",
+        reply_markup=_main_menu_keyboard(user.id),
+    )
 
 
 async def _handle_ai_playlist(
