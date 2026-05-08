@@ -149,8 +149,18 @@
     <div class="preview-title" style="margin-bottom:12px">Selected Track</div>
     <div id="search-track-info" class="card"></div>
     <div class="preview-actions">
-      <button class="btn btn-primary" onclick="App.createTrackPlaylist()">Create Playlist</button>
-      <button class="btn btn-ghost" onclick="App.cancelSearchPreview()">Cancel</button>
+      <button class="btn btn-primary" onclick="App.showPlaylistPicker()">Add to Playlist</button>
+      <button class="btn btn-ghost" onclick="App.createTrackPlaylist()">New Playlist</button>
+      <button class="btn btn-ghost btn-danger-text" onclick="App.cancelSearchPreview()">Cancel</button>
+    </div>
+  </div>
+
+  <div id="search-playlist-picker" class="preview-section">
+    <div class="preview-title" style="margin-bottom:12px">Add to playlist:</div>
+    <div id="picker-list" class="picker-list"></div>
+    <div class="preview-actions" style="margin-top:12px">
+      <button class="btn btn-ghost" onclick="App.createTrackPlaylist()">+ New Playlist</button>
+      <button class="btn btn-ghost btn-danger-text" onclick="App.hidePlaylistPicker()">Cancel</button>
     </div>
   </div>
 </div>

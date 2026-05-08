@@ -39,6 +39,11 @@ const API = (() => {
         method: "POST",
         body: JSON.stringify({ query }),
       }),
+    addToPlaylist: ({ spotifyPlaylistId, uris }) =>
+      request("/api/add-to-playlist", {
+        method: "POST",
+        body: JSON.stringify({ spotify_playlist_id: spotifyPlaylistId, uris }),
+      }),
     deletePlaylist: (id) =>
       request(`/api/playlist/${id}`, { method: "DELETE" }),
   };

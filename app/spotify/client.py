@@ -190,12 +190,12 @@ async def get_me(access_token: str) -> Optional[Dict]:
 
 async def get_top_tracks(access_token: str, limit: int = 20) -> List[Dict]:
     """Получить топ треки из Top 50 Global плейлиста."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT) as client:
         try:
             response = await client.get(
                 f"{SPOTIFY_API_BASE}/playlists/{TOP_50_GLOBAL_PLAYLIST_ID}/tracks",
                 headers={'Authorization': f'Bearer {access_token}'},
-                params={'limit': limit, 'fields': 'items(track(uri,name,artists))'}
+                params={'limit': limit}
             )
             response.raise_for_status()
             data = response.json()

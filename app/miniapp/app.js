@@ -294,7 +294,59 @@ const App = (() => {
   function cancelSearchPreview() {
     selectedTrack = null;
     hideEl("search-preview");
+    hideEl("search-playlist-picker");
     document.getElementById("search-results").innerHTML = "";
+  }
+
+  async function showPlaylistPicker() {
+    if (!selectedTrack) return;
+    hideEl("search-preview");
+
+    const container = document.getElementById("picker-list");
+    container.innerHTML = '<div class="loader" style="padding:16px 0"><div class="spinner"></div></div>';
+    showEl("search-playlist-picker");
+
+    try {
+      const data = await API.getHistory();
+      const playlists = (data.playlists || []).filter((p) => p.spotify_playlist_id);
+
+      if (playlists.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:var(--hint);padding:16px 0;font-size:13px">No playlists yet. Create one first.</div>';
+        return;
+      }
+
+      container.innerHTML = playlists
+        .map((p) => {
+          const icon = p.source === "ai" ? "&#129302;" : p.source === "top20" ? "&#128293;" : "&#127925;";
+          const count = p.tracks_count ? p.tracks_count + " tracks" : "";
+          return `<button class="picker-item" onclick="App.addToExistingPlaylist('${escapeHtml(p.spotify_playlist_id)}')">
+            <div class="pi-icon">${icon}</div>
+            <div class="pi-info">
+              <div class="pi-name">${escapeHtml(p.name || "Untitled")}</div>
+              <div class="pi-meta">${count}</div>
+            </div>
+          </button>`;
+        })
+        .join("");
+    } catch (e) {
+      container.innerHTML = '<div style="color:var(--danger);text-align:center;padding:16px 0">Error loading playlists</div>';
+    }
+  }
+
+  function hidePlaylistPicker() {
+    hideEl("search-playlist-picker");
+    showEl("search-preview");
+  }
+
+  async function addToExistingPlaylist(spotifyPlaylistId) {
+    if (!selectedTrack) return;
+    try {
+      await API.addToPlaylist({ spotifyPlaylistId, uris: [selectedTrack.uri] });
+      toast("Track added!");
+      cancelSearchPreview();
+    } catch (e) {
+      toast("Error: " + e.message);
+    }
   }
 
   /* ── History ───────────────────────────────────────── */
@@ -406,6 +458,7 @@ const App = (() => {
     switchTab, usePreset, generatePlaylist, createAiPlaylist,
     regeneratePlaylist, cancelPreview, createTop20Playlist,
     searchTrack, selectTrack, createTrackPlaylist, cancelSearchPreview,
+    showPlaylistPicker, hidePlaylistPicker, addToExistingPlaylist,
     connectSpotify, repeatFromHistory, deletePlaylist,
   };
 })();

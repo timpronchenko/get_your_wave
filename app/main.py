@@ -276,6 +276,28 @@ async def api_search(request: Request, x_telegram_init_data: str = Header(None))
     return {"tracks": tracks}
 
 
+@app.post("/api/add-to-playlist")
+async def api_add_to_playlist(request: Request, x_telegram_init_data: str = Header(None)):
+    uid = _require_user(x_telegram_init_data)
+    body = await request.json()
+    spotify_playlist_id = body.get("spotify_playlist_id", "").strip()
+    uris = body.get("uris", [])
+
+    if not spotify_playlist_id or not uris:
+        raise HTTPException(status_code=400, detail="Missing playlist_id or uris")
+
+    access_token = await spotify_client.ensure_valid_token(uid)
+    if not access_token:
+        raise HTTPException(status_code=403, detail="Spotify not connected")
+
+    ok = await spotify_client.add_tracks_to_playlist(access_token, spotify_playlist_id, uris)
+    if not ok:
+        raise HTTPException(status_code=500, detail="Failed to add tracks")
+
+    db.increment_tracks_count(spotify_playlist_id, len(uris))
+    return {"ok": True}
+
+
 @app.delete("/api/playlist/{playlist_id}")
 async def api_delete_playlist(playlist_id: int, x_telegram_init_data: str = Header(None)):
     uid = _require_user(x_telegram_init_data)

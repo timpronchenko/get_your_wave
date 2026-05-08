@@ -444,3 +444,48 @@ body {
   font-size: 12px;
   color: var(--hint);
 }
+
+/* ── Playlist Picker ───────────────────────────────── */
+.picker-list { display: flex; flex-direction: column; gap: 6px; }
+
+.picker-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--section-bg);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: background .12s;
+  border: none;
+  width: 100%;
+  text-align: left;
+  color: var(--text);
+  font-family: inherit;
+}
+.picker-item:active { background: rgba(29,185,84,.1); }
+
+.picker-item .pi-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(128,128,128,.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.picker-item .pi-info { flex: 1; min-width: 0; }
+.picker-item .pi-name {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.picker-item .pi-meta {
+  font-size: 12px;
+  color: var(--hint);
+}

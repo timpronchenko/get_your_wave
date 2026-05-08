@@ -193,6 +193,18 @@ def get_playlist(playlist_id: int) -> Optional[Dict[str, Any]]:
     return dict(row) if row else None
 
 
+def increment_tracks_count(spotify_playlist_id: str, added: int = 1):
+    """Увеличить tracks_count для плейлиста по spotify_playlist_id."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE playlists SET tracks_count = COALESCE(tracks_count, 0) + ? WHERE spotify_playlist_id = ?",
+        (added, spotify_playlist_id),
+    )
+    conn.commit()
+    conn.close()
+
+
 def delete_playlist(playlist_id: int) -> bool:
     """Удалить плейлист из истории по id."""
     conn = sqlite3.connect(DB_PATH)
