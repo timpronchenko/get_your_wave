@@ -115,12 +115,7 @@ def _main_menu_keyboard(user_id: int) -> InlineKeyboardMarkup:
 
     buttons = [
         [InlineKeyboardButton("🤖 Создать AI-плейлист", callback_data="menu:ai")],
-        [InlineKeyboardButton("🔥 Топ-20 Global", callback_data="menu:top20")],
-        [InlineKeyboardButton("🎵 Добавить песню", callback_data="menu:add_song")],
-        [
-            InlineKeyboardButton("🗂 История", callback_data="menu:history"),
-            InlineKeyboardButton("📊 Статус", callback_data="menu:status"),
-        ],
+        [InlineKeyboardButton("📦 Ещё...", callback_data="menu:more")],
     ]
 
     # Mini App button (Telegram требует HTTPS для WebApp)
@@ -229,6 +224,25 @@ async def on_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Выберите действие:",
                 parse_mode="HTML",
                 reply_markup=_main_menu_keyboard(user.id),
+            )
+        except TelegramError:
+            pass
+        return
+
+    # ── More (подменю) ─────────────────────────────────────────────────
+    if action == "more":
+        more_kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🔥 Топ-20 Global", callback_data="menu:top20")],
+            [InlineKeyboardButton("🎵 Добавить песню", callback_data="menu:add_song")],
+            [InlineKeyboardButton("🗂 История", callback_data="menu:history")],
+            [InlineKeyboardButton("📊 Статус", callback_data="menu:status")],
+            [InlineKeyboardButton("⬅️ Назад", callback_data="menu:back")],
+        ])
+        try:
+            await query.edit_message_text(
+                "📦 <b>Дополнительные функции</b>\n\nВыберите действие:",
+                parse_mode="HTML",
+                reply_markup=more_kb,
             )
         except TelegramError:
             pass
@@ -477,7 +491,7 @@ async def on_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ─── Обработка вставленного callback URL ─────────────────────────────────────
 
 async def _handle_pasted_callback(update: Update, context: ContextTypes.DEFAULT_TYPE, text: str):
-    """Обработать вставленный URL с OAuth callback (авторизация с телефона без ngrok)."""
+    """Обработать вставленный URL с OAuth callback (авторизация с телефона)."""
     user = update.effective_user
     chat_id = update.effective_chat.id
 

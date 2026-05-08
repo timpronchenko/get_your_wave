@@ -1,6 +1,5 @@
 """Единая точка входа: FastAPI (OAuth callback) + Telegram-бот + Mini App API."""
 import logging
-import socket
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -49,39 +48,12 @@ logger = logging.getLogger(__name__)
 _tg_app: Application | None = None
 
 
-def _get_local_ip() -> str:
-    """Определить локальный IP в сети (для доступа с телефона)."""
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
-        s.close()
-        return ip
-    except Exception:
-        return "127.0.0.1"
-
-
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     """При старте — Telegram-бот, при остановке — корректно гасим."""
     global _tg_app
 
-    # Показать подсказку с локальным IP
-    local_ip = _get_local_ip()
-    logger.info("=" * 60)
-    logger.info("Сервер доступен по адресам:")
-    logger.info("  Локально:  http://127.0.0.1:8000")
-    logger.info("  В сети:    http://%s:8000", local_ip)
-    logger.info("")
-    if settings.base_url.startswith("http://127.0.0.1"):
-        logger.info("СОВЕТ: Для авторизации с телефона в той же WiFi-сети")
-        logger.info("задайте в .env:")
-        logger.info("  BASE_URL=http://%s:8000", local_ip)
-        logger.info("  SPOTIFY_REDIRECT_URI=http://%s:8000/callback", local_ip)
-        logger.info("и добавьте этот Redirect URI в Spotify Dashboard")
-    else:
-        logger.info("Redirect URI: %s", settings.spotify_redirect_uri)
-    logger.info("=" * 60)
+    logger.info("Redirect URI: %s", settings.spotify_redirect_uri)
 
     db.init_db()
 
@@ -302,6 +274,25 @@ async def api_search(request: Request, x_telegram_init_data: str = Header(None))
 
     tracks = await spotify_client.search_tracks(access_token, query, limit=10)
     return {"tracks": tracks}
+
+
+@app.delete("/api/playlist/{playlist_id}")
+async def api_delete_playlist(playlist_id: int, x_telegram_init_data: str = Header(None)):
+    uid = _require_user(x_telegram_init_data)
+    playlist = db.get_playlist(playlist_id)
+    if not playlist:
+        raise HTTPException(status_code=404, detail="Playlist not found")
+    if playlist["telegram_user_id"] != uid:
+        raise HTTPException(status_code=403, detail="Not your playlist")
+
+    spotify_pid = playlist.get("spotify_playlist_id")
+    if spotify_pid:
+        access_token = await spotify_client.ensure_valid_token(uid)
+        if access_token:
+            await spotify_client.unfollow_playlist(access_token, spotify_pid)
+
+    db.delete_playlist(playlist_id)
+    return {"ok": True}
 
 
 @app.get("/api/connect-url")

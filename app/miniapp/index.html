@@ -14,146 +14,179 @@
 
 <!-- ── Page: Home ─────────────────────────────────────────────── -->
 <div class="page active" id="page-home">
-  <div class="page-header">CatchTheWave</div>
-  <div class="page-subtitle">AI-powered Spotify playlists</div>
-
-  <div id="home-status" class="card" style="margin-bottom:20px">
-    <div class="loader"><div class="spinner"></div><br>Loading...</div>
+  <div class="page-header">
+    <div class="page-title">CatchTheWave</div>
+    <div class="page-subtitle">AI-powered Spotify playlists</div>
   </div>
 
-  <div style="display:flex;flex-direction:column;gap:10px">
-    <button class="btn" onclick="App.switchTab('ai')">
-      <span>&#129302;</span> Create AI Playlist
-    </button>
-    <button class="btn btn-secondary" onclick="App.switchTab('top20')">
-      <span>&#128293;</span> Top-20 Global
-    </button>
-    <button class="btn btn-secondary" onclick="App.switchTab('search')">
-      <span>&#127925;</span> Add Song
-    </button>
+  <div id="home-status" class="status-card">
+    <div class="loader"><div class="spinner"></div></div>
+  </div>
+
+  <div class="action-cards">
+    <div class="action-card" onclick="App.switchTab('ai')">
+      <div class="action-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 1 4 4v1a3 3 0 0 1 3 3v1a2 2 0 0 1-2 2h-1"/><path d="M8 7V6a4 4 0 0 1 8 0"/><path d="M8 7a3 3 0 0 0-3 3v1a2 2 0 0 0 2 2h1"/><circle cx="12" cy="17" r="3"/><path d="M12 14v-1"/></svg>
+      </div>
+      <div class="action-text">
+        <div class="action-title">AI Playlist</div>
+        <div class="action-desc">Describe your mood</div>
+      </div>
+      <svg class="action-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+    </div>
+
+    <div class="action-card" onclick="App.switchTab('top20')">
+      <div class="action-icon action-icon-orange">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+      </div>
+      <div class="action-text">
+        <div class="action-title">Top-20 Global</div>
+        <div class="action-desc">Spotify chart hits</div>
+      </div>
+      <svg class="action-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+    </div>
+
+    <div class="action-card" onclick="App.switchTab('search')">
+      <div class="action-icon action-icon-purple">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      </div>
+      <div class="action-text">
+        <div class="action-title">Add Song</div>
+        <div class="action-desc">Search or paste a link</div>
+      </div>
+      <svg class="action-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+    </div>
   </div>
 </div>
 
 <!-- ── Page: AI Playlist ─────────────────────────────────────── -->
 <div class="page" id="page-ai">
-  <div class="page-header">AI Playlist</div>
-  <div class="page-subtitle">Describe what you want to listen to</div>
+  <div class="page-header">
+    <div class="page-title">AI Playlist</div>
+    <div class="page-subtitle">Describe what you want to listen to</div>
+  </div>
 
   <div id="ai-input-section">
-    <div class="presets-grid">
-      <button class="preset-btn" onclick="App.usePreset('chill')">&#128715; Chill</button>
-      <button class="preset-btn" onclick="App.usePreset('workout')">&#127947; Workout</button>
-      <button class="preset-btn" onclick="App.usePreset('focus')">&#129504; Focus</button>
-      <button class="preset-btn" onclick="App.usePreset('party')">&#127881; Party</button>
-      <button class="preset-btn" onclick="App.usePreset('ru_rap')">&#127479;&#127482; Russian Rap</button>
-      <button class="preset-btn" onclick="App.usePreset('retro_80')">&#128377; Retro 80s</button>
+    <div class="chips-row">
+      <button class="chip" onclick="App.usePreset('chill')">Chill</button>
+      <button class="chip" onclick="App.usePreset('workout')">Workout</button>
+      <button class="chip" onclick="App.usePreset('focus')">Focus</button>
+      <button class="chip" onclick="App.usePreset('party')">Party</button>
+      <button class="chip" onclick="App.usePreset('ru_rap')">Russian Rap</button>
+      <button class="chip" onclick="App.usePreset('retro_80')">Retro 80s</button>
     </div>
 
     <div class="input-group">
       <textarea id="ai-prompt" rows="3" placeholder="e.g. Calm evening music, lo-fi beats..."></textarea>
     </div>
 
-    <button class="btn" id="ai-generate-btn" onclick="App.generatePlaylist()">
+    <button class="btn btn-primary" id="ai-generate-btn" onclick="App.generatePlaylist()">
       Generate Playlist
     </button>
   </div>
 
   <div id="ai-loading" class="loader" style="display:none">
     <div class="spinner"></div>
-    <br>AI is selecting tracks...
+    <div class="loader-text">AI is selecting tracks...</div>
   </div>
 
   <div id="ai-preview" class="preview-section">
     <div class="preview-header">
-      <div>
-        <div style="font-weight:700;font-size:17px">Preview</div>
-        <div id="ai-preview-info" style="font-size:13px;color:var(--hint)"></div>
-      </div>
+      <div class="preview-title">Preview</div>
+      <div id="ai-preview-info" class="preview-info"></div>
     </div>
     <ul class="track-list" id="ai-track-list"></ul>
     <div class="preview-actions">
-      <button class="btn" onclick="App.createAiPlaylist()">Create</button>
-      <button class="btn btn-secondary" onclick="App.regeneratePlaylist()">Regenerate</button>
-      <button class="btn btn-danger btn-small" onclick="App.cancelPreview()">Cancel</button>
+      <button class="btn btn-primary" onclick="App.createAiPlaylist()">Create</button>
+      <button class="btn btn-ghost" onclick="App.regeneratePlaylist()">Regenerate</button>
+      <button class="btn btn-ghost btn-danger-text" onclick="App.cancelPreview()">Cancel</button>
     </div>
   </div>
 </div>
 
 <!-- ── Page: Top-20 ──────────────────────────────────────────── -->
 <div class="page" id="page-top20">
-  <div class="page-header">Top-20 Global</div>
-  <div class="page-subtitle">Current top tracks from Spotify charts</div>
+  <div class="page-header">
+    <div class="page-title">Top-20 Global</div>
+    <div class="page-subtitle">Current Spotify chart hits</div>
+  </div>
 
   <div id="top20-loading" class="loader">
     <div class="spinner"></div>
-    <br>Loading chart...
+    <div class="loader-text">Loading chart...</div>
   </div>
 
   <div id="top20-preview" class="preview-section">
     <ul class="track-list" id="top20-track-list"></ul>
     <div class="preview-actions">
-      <button class="btn" onclick="App.createTop20Playlist()">Create Playlist</button>
-      <button class="btn btn-secondary" onclick="App.switchTab('home')">Cancel</button>
+      <button class="btn btn-primary" onclick="App.createTop20Playlist()">Create Playlist</button>
+      <button class="btn btn-ghost" onclick="App.switchTab('home')">Cancel</button>
     </div>
   </div>
 </div>
 
 <!-- ── Page: Search / Add Song ───────────────────────────────── -->
 <div class="page" id="page-search">
-  <div class="page-header">Add Song</div>
-  <div class="page-subtitle">Search for a track or paste a Spotify link</div>
+  <div class="page-header">
+    <div class="page-title">Add Song</div>
+    <div class="page-subtitle">Search or paste a Spotify link</div>
+  </div>
 
   <div class="input-group">
-    <input type="text" id="search-input" placeholder="Song name, artist, or Spotify link..."
+    <input type="text" id="search-input" placeholder="Song name, artist, or link..."
            onkeydown="if(event.key==='Enter')App.searchTrack()">
   </div>
-  <button class="btn" onclick="App.searchTrack()">Search</button>
+  <button class="btn btn-primary" onclick="App.searchTrack()">Search</button>
 
   <div id="search-loading" class="loader" style="display:none">
     <div class="spinner"></div>
-    <br>Searching...
+    <div class="loader-text">Searching...</div>
   </div>
 
   <div class="search-results" id="search-results"></div>
 
   <div id="search-preview" class="preview-section">
-    <div style="font-weight:700;font-size:17px;margin-bottom:12px">Selected Track</div>
+    <div class="preview-title" style="margin-bottom:12px">Selected Track</div>
     <div id="search-track-info" class="card"></div>
     <div class="preview-actions">
-      <button class="btn" onclick="App.createTrackPlaylist()">Create Playlist</button>
-      <button class="btn btn-secondary" onclick="App.cancelSearchPreview()">Cancel</button>
+      <button class="btn btn-primary" onclick="App.createTrackPlaylist()">Create Playlist</button>
+      <button class="btn btn-ghost" onclick="App.cancelSearchPreview()">Cancel</button>
     </div>
   </div>
 </div>
 
 <!-- ── Page: History ──────────────────────────────────────────── -->
 <div class="page" id="page-history">
-  <div class="page-header">History</div>
-  <div class="page-subtitle">Your created playlists</div>
+  <div class="page-header">
+    <div class="page-title">History</div>
+    <div class="page-subtitle">Your created playlists</div>
+  </div>
 
   <div id="history-loading" class="loader">
     <div class="spinner"></div>
-    <br>Loading...
+    <div class="loader-text">Loading...</div>
   </div>
 
   <div id="history-list"></div>
   <div id="history-empty" class="empty-state" style="display:none">
-    <div class="icon">&#128450;</div>
-    <div>No playlists yet</div>
-    <div style="margin-top:8px;font-size:13px">Create your first playlist and it will appear here</div>
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".4"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M8 7h8M8 11h5"/></svg>
+    <div class="empty-title">No playlists yet</div>
+    <div class="empty-desc">Create your first playlist and it will appear here</div>
   </div>
 </div>
 
 <!-- ── Page: Profile ──────────────────────────────────────────── -->
 <div class="page" id="page-profile">
-  <div class="page-header">Profile</div>
+  <div class="page-header">
+    <div class="page-title">Profile</div>
+  </div>
 
   <div id="profile-content" class="card">
     <div class="loader"><div class="spinner"></div></div>
   </div>
 
   <div style="margin-top:16px">
-    <button class="btn btn-secondary" id="profile-connect-btn" style="display:none" onclick="App.connectSpotify()">
+    <button class="btn btn-ghost" id="profile-connect-btn" style="display:none" onclick="App.connectSpotify()">
       Connect Spotify
     </button>
   </div>
@@ -162,20 +195,20 @@
 <!-- ── Tab Bar ────────────────────────────────────────────────── -->
 <nav class="tab-bar">
   <button class="active" onclick="App.switchTab('home')">
-    <span class="icon">&#127968;</span>
-    Home
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    <span>Home</span>
   </button>
   <button onclick="App.switchTab('ai')">
-    <span class="icon">&#129302;</span>
-    AI
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 1 4 4v1a3 3 0 0 1 3 3v1a2 2 0 0 1-2 2h-1"/><path d="M8 7V6a4 4 0 0 1 8 0"/><path d="M8 7a3 3 0 0 0-3 3v1a2 2 0 0 0 2 2h1"/><circle cx="12" cy="17" r="3"/><path d="M12 14v-1"/></svg>
+    <span>AI</span>
   </button>
   <button onclick="App.switchTab('history')">
-    <span class="icon">&#128450;</span>
-    History
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <span>History</span>
   </button>
   <button onclick="App.switchTab('profile')">
-    <span class="icon">&#128100;</span>
-    Profile
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <span>Profile</span>
   </button>
 </nav>
 

@@ -303,6 +303,25 @@ async def add_tracks_to_playlist(access_token: str, playlist_id: str, track_uris
         return True
 
 
+async def unfollow_playlist(access_token: str, playlist_id: str) -> bool:
+    """Удалить (unfollow) плейлист из библиотеки пользователя."""
+    async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT) as http:
+        try:
+            resp = await http.delete(
+                f"{SPOTIFY_API_BASE}/playlists/{playlist_id}/followers",
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+            resp.raise_for_status()
+            logger.info("Плейлист %s удалён (unfollow)", playlist_id)
+            return True
+        except httpx.HTTPStatusError as e:
+            logger.error("Ошибка unfollow: %s — %s", e.response.status_code, e.response.text)
+            return False
+        except Exception as e:
+            logger.error("Ошибка при unfollow: %s", e)
+            return False
+
+
 async def make_playlist_with_top_tracks(telegram_user_id: int) -> Optional[str]:
     """Создать плейлист с топ-20 треками из Top 50 Global."""
     access_token = await ensure_valid_token(telegram_user_id)

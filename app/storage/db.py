@@ -193,6 +193,19 @@ def get_playlist(playlist_id: int) -> Optional[Dict[str, Any]]:
     return dict(row) if row else None
 
 
+def delete_playlist(playlist_id: int) -> bool:
+    """Удалить плейлист из истории по id."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM playlists WHERE id = ?", (playlist_id,))
+    deleted = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    if deleted:
+        logger.info("Плейлист удалён из истории: id=%s", playlist_id)
+    return deleted
+
+
 def list_playlists(telegram_user_id: int, limit: int = 5) -> List[Dict[str, Any]]:
     """Вернуть последние N плейлистов пользователя (новые сверху)."""
     limit = max(1, min(int(limit), 50))

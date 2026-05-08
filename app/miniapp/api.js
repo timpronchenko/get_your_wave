@@ -39,5 +39,7 @@ const API = (() => {
         method: "POST",
         body: JSON.stringify({ query }),
       }),
+    deletePlaylist: (id) =>
+      request(`/api/playlist/${id}`, { method: "DELETE" }),
   };
 })();
