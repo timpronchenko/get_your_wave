@@ -1,246 +1,164 @@
-# CatchTheWave — Telegram → Spotify Playlist Bot
+# CatchTheWave — Telegram Spotify Playlist Bot
 
-Дипломный проект: Telegram-бот, собирающий плейлисты в Spotify
-по текстовому запросу пользователя на естественном языке (через DeepSeek AI),
-с предпросмотром, историей и быстрыми пресетами настроения.
+Telegram-бот + Mini App для создания плейлистов в Spotify
+по текстовому запросу на естественном языке через DeepSeek AI.
 
-## 🎯 Возможности
+Дипломный проект (ВКР), развёрнутый на VPS с HTTPS.
 
-- Авторизация в Spotify через OAuth 2.0 с PKCE (без client secret)
-- 🤖 **AI-плейлист** по тексту: запрос → DeepSeek → поиск треков в Spotify →
-  **предпросмотр** перед сохранением (✅ Создать / 🔁 Сгенерировать заново / ❌ Отмена)
-- 🎚 **Быстрые пресеты** настроения и жанра: Чилл, Тренировка, Фокус,
-  Вечеринка, Русский рэп, Ретро 80-х
-- 🔥 Плейлист «Top 20 Global» одним нажатием
-- 🎵 Добавление песни по поиску, ссылке или URI с выбором из вариантов
-- 🗂 **История** последних плейлистов пользователя (`/history` или кнопка)
-- Локальное хранение токенов и истории (SQLite, без шифрования — только для демо)
+## Возможности
 
-## ⚠️ Важные ограничения
+- **AI-плейлисты** — описание на естественном языке -> DeepSeek AI -> параллельный поиск треков в Spotify -> предпросмотр -> сохранение
+- **Быстрые пресеты** — Чилл, Тренировка, Фокус, Вечеринка, Русский рэп, Ретро 80-х
+- **Top-20 Global** — плейлист из глобального чарта Spotify одной кнопкой
+- **Поиск и добавление** — по названию, ссылке или URI; можно добавить в существующий плейлист
+- **Удаление плейлистов** — unfollow из Spotify + удаление из истории
+- **История** — последние плейлисты с повтором AI-генерации
+- **Telegram Mini App** — полноценный веб-интерфейс внутри Telegram (HTTPS)
+- **OAuth 2.0 PKCE** — авторизация без client secret, поддержка мобильной авторизации через вставку URL
+- **SQLite с WAL** — конкурентный доступ без блокировок
 
-- **🌐 VPN обязателен на территории РФ.** Spotify (`accounts.spotify.com`,
-  `api.spotify.com`, `open.spotify.com`) недоступен без VPN — без него
-  не пройдёт ни авторизация, ни запросы к API.
-- По умолчанию работает локально без HTTPS:
-  Redirect URI **`http://127.0.0.1:8000/callback`** (НЕ `localhost` —
-  Spotify не принимает literal `localhost`).
-- Ссылку авторизации нужно открывать **на том же компьютере**, где запущен
-  сервер (например, Telegram Desktop), иначе редирект на `127.0.0.1`
-  не отработает. Для авторизации с телефона можно поднять ngrok-туннель
-  (см. `NGROK_AUTHTOKEN` в `.env.example`).
+## Архитектура
 
-## 📋 Требования
+```
+Telegram Bot (polling)
+        |
+   FastAPI (uvicorn :8000)
+   ├── /callback         — OAuth redirect от Spotify
+   ├── /api/*            — REST API для Mini App (auth через Depends + HMAC)
+   ├── /miniapp/         — статика Mini App (HTML/CSS/JS)
+   └── /health           — healthcheck
+        |
+   nginx (443/80) + Let's Encrypt
+        |
+   catchthewave.duckdns.org
+```
+
+**Внешние API:** Spotify Web API, DeepSeek Chat API, Telegram Bot API.
+
+## Требования
 
 - Python 3.11+
-- Telegram Bot Token (от [@BotFather](https://t.me/BotFather))
-- Spotify App (из [Spotify Developer Dashboard](https://developer.spotify.com/dashboard))
-- API-ключ DeepSeek ([platform.deepseek.com](https://platform.deepseek.com))
-  для генерации AI-плейлистов
-- Активный VPN (для пользователей из РФ)
+- Telegram Bot Token ([@BotFather](https://t.me/BotFather))
+- Spotify App ([developer.spotify.com/dashboard](https://developer.spotify.com/dashboard))
+- DeepSeek API Key ([platform.deepseek.com](https://platform.deepseek.com))
+- VPN (для пользователей из РФ — Spotify заблокирован)
 
-Краткий чеклист: [QUICKSTART.md](QUICKSTART.md).
-
-## 🚀 Установка
-
-1. **Клонировать репозиторий и перейти в директорию:**
-   ```bash
-   cd VKR
-   ```
-
-2. **Установить зависимости:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Создать файл `.env` на основе `.env.example`:**
-   ```bash
-   cp .env.example .env
-   ```
-
-4. **Заполнить `.env` файл:**
-   ```env
-   TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
-   SPOTIFY_CLIENT_ID=your_spotify_client_id_here
-   SPOTIFY_REDIRECT_URI=http://127.0.0.1:8000/callback
-   BASE_URL=http://127.0.0.1:8000
-   DEEPSEEK_API_KEY=your_deepseek_api_key_here
-   # Опционально, для авторизации с телефона:
-   # NGROK_AUTHTOKEN=...
-   ```
-
-## 🔧 Настройка Spotify App
-
-1. **Создать приложение:**
-   - Перейти на https://developer.spotify.com/dashboard
-   - Нажать "Create app"
-   - Заполнить название и описание
-   - Принять условия использования
-
-2. **Настроить Redirect URI:**
-   - В настройках приложения найти "Redirect URIs"
-   - **Добавить ТОЧНО:** `http://127.0.0.1:8000/callback`
-   - ⚠️ **НЕ используйте `localhost`** — Spotify может его отклонить
-   - Сохранить изменения
-
-3. **Скопировать Client ID:**
-   - В настройках приложения найти "Client ID"
-   - Скопировать в `.env` файл как `SPOTIFY_CLIENT_ID`
-   - **Client Secret НЕ нужен** (используется PKCE)
-
-## 🎮 Запуск
-
-**Одна команда** — бот и callback-сервер стартуют вместе:
+## Установка
 
 ```bash
-cd VKR
+git clone https://github.com/timpronchenko/get_your_wave.git
+cd get_your_wave
+python3 -m venv .venv
 source .venv/bin/activate
-uvicorn app.main:app --host 127.0.0.1 --port 8000
+pip install -r requirements.txt
+cp .env.example .env
+# Заполнить .env своими значениями
 ```
 
-Или без активации venv:
+## Настройка .env
+
+```env
+TELEGRAM_BOT_TOKEN=...          # от @BotFather
+SPOTIFY_CLIENT_ID=...           # из Spotify Developer Dashboard
+SPOTIFY_REDIRECT_URI=https://catchthewave.duckdns.org/callback
+BASE_URL=https://catchthewave.duckdns.org
+DEEPSEEK_API_KEY=...            # с platform.deepseek.com
+```
+
+Для локальной разработки:
+```env
+SPOTIFY_REDIRECT_URI=http://127.0.0.1:8000/callback
+BASE_URL=http://127.0.0.1:8000
+```
+
+## Настройка Spotify App
+
+1. Создать приложение на [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard)
+2. В **Redirect URIs** добавить URL из `.env` (например `https://catchthewave.duckdns.org/callback`)
+3. Скопировать **Client ID** в `.env`. Client Secret **не нужен** (используется PKCE).
+
+## Запуск
 
 ```bash
-.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+source .venv/bin/activate
+make run
+# или: uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-В логах появится `Telegram-бот запущен (polling)` — значит всё работает.
+Проверка: `curl http://127.0.0.1:8000/health` -> `{"status":"ok"}`.
 
-## 📱 Использование
+## Использование
 
-1. **Включить VPN** (для пользователей из РФ — обязательно).
-2. **Найти бота в Telegram** и отправить `/start` — откроется главное меню
-   с inline-кнопками.
-3. **Подключить Spotify:** «🔗 Подключить Spotify» → ссылка → разрешить.
-4. **AI-плейлист (главный сценарий):**
-   - Нажать «🤖 Создать AI-плейлист».
-   - Либо выбрать **готовый пресет** (🛋 Чилл / 🏋️ Тренировка / 🧠 Фокус /
-     🎉 Вечеринка / 🇷🇺 Русский рэп / 🕹 Ретро 80-х),
-     либо отправить **свой текстовый запрос** на естественном языке.
-   - Бот покажет **предпросмотр** найденных треков.
-   - Кнопки: **✅ Создать плейлист** / **🔁 Сгенерировать заново** / **❌ Отмена**.
-5. **Готовые быстрые сценарии:**
-   - «🔥 Топ-20 Global» — плейлист «Diploma MVP — Top 20» из Top 50 Global.
-   - «🎵 Добавить песню» — новый плейлист с выбранным треком (поиск,
-     ссылка `open.spotify.com/track/…` или URI `spotify:track:…`).
-6. **История:** «🗂 История» или `/history` — последние 5 плейлистов
-   с прямыми ссылками.
-7. **Отключение:** «🚪 Отключить Spotify» / `/disconnect` — удалит
-   токены из локальной БД.
+### Telegram Bot
 
-## 🔍 Команды бота
+1. `/start` — главное меню со статусом подключения
+2. **Подключить Spotify** — OAuth через inline-кнопку
+3. **AI-плейлист** — пресет или свободный текст -> предпросмотр -> создание
+4. **Ещё...** — подменю с Top-20, поиском, историей, статусом
+5. **Mini App** — кнопка появляется при HTTPS (`BASE_URL=https://...`)
 
-- `/start` — главное меню и статус авторизации
-- `/connect` — получить ссылку для авторизации в Spotify
-- `/status` — проверить статус подключения и токены
-- `/make_playlist` — плейлист с топ-20 треками (Top 50 Global)
-- `/add_song` — новый плейлист с одним треком (поиск или ссылка Spotify)
-- `/history` — история последних плейлистов
-- `/disconnect` — отключить Spotify и удалить данные
+### Mini App (веб-интерфейс)
 
-## 🐛 Troubleshooting
+Вкладки: Home, AI, History, Account. Поддержка поиска треков, добавления в существующие плейлисты, удаления.
 
-### Не выполняется ни одна команда / таймауты на запросах к Spotify (РФ)
+### Команды бота
 
-**Решение:** включите VPN. Spotify заблокирован Роскомнадзором —
-без VPN недоступны ни `accounts.spotify.com`, ни `api.spotify.com`.
+| Команда | Описание |
+|---------|----------|
+| `/start` | Главное меню |
+| `/connect` | Ссылка для авторизации Spotify |
+| `/status` | Статус подключения и токена |
+| `/make_playlist` | Top-20 Global плейлист |
+| `/add_song` | Добавить трек (поиск / ссылка / URI) |
+| `/history` | Последние 5 плейлистов |
+| `/disconnect` | Отключить Spotify, удалить токены |
 
-### `redirect_uri_mismatch`
-
-**Проблема:** Spotify возвращает ошибку "redirect_uri_mismatch"
-
-**Решение:**
-1. Проверить, что в Spotify Dashboard добавлен **ТОЧНО** `http://127.0.0.1:8000/callback`
-2. Проверить, что в `.env` файле `SPOTIFY_REDIRECT_URI=http://127.0.0.1:8000/callback`
-3. Убедиться, что используется `127.0.0.1`, а НЕ `localhost`
-4. После изменения Redirect URI в Dashboard подождать 1-2 минуты (кэш Spotify)
-
-### `state expired`
-
-**Проблема:** Сообщение об истёкшем state
-
-**Решение:**
-- State действителен 10 минут
-- Использовать `/connect` снова для получения новой ссылки
-
-### `401 Unauthorized`
-
-**Проблема:** Ошибка 401 при запросах к Spotify API
-
-**Решение:**
-- Токен истёк — бот должен автоматически обновить его
-- Если не помогло, использовать `/disconnect` и `/connect` для переподключения
-- Проверить, что в Spotify Dashboard приложение активно
-
-### Токен не обновляется автоматически
-
-**Проблема:** Токен истёк, но не обновляется
-
-**Решение:**
-- Проверить логи бота на наличие ошибок
-- Убедиться, что `refresh_token` сохранён в БД
-- Использовать `/disconnect` и `/connect` для получения новых токенов
-
-### Проблемы с scope (правами доступа)
-
-**Проблема:** Не удаётся создать плейлист
-
-**Решение:**
-- Проверить, что при авторизации были предоставлены права `playlist-modify-private`
-- Использовать `/disconnect` и `/connect` для повторной авторизации с правильными scope
-
-### Ссылка авторизации не открывается
-
-**Проблема:** Редирект не работает
-
-**Решение:**
-- Убедиться, что FastAPI сервер запущен на `127.0.0.1:8000`
-- Открывать ссылку на том же ноутбуке, где запущен бот
-- Проверить, что порт 8000 не занят другим приложением
-
-## 📁 Структура проекта
+## Структура проекта
 
 ```
-VKR/
-├── app/
-│   ├── __init__.py
-│   ├── main.py              # Единая точка входа: FastAPI + Telegram-бот
-│   ├── bot.py               # Команды, кнопки, AI-флоу с предпросмотром
-│   ├── config.py            # Pydantic settings
-│   ├── logging_config.py    # Единый logging-конфиг
-│   ├── prompt.txt           # Системный промпт для DeepSeek
-│   ├── ai/
-│   │   ├── __init__.py
-│   │   └── deepseek.py      # Генерация плейлиста по тексту
-│   ├── storage/
-│   │   ├── __init__.py
-│   │   └── db.py            # SQLite: users + playlists (история)
-│   └── spotify/
-│       ├── __init__.py
-│       ├── oauth.py         # PKCE, OAuth-флоу
-│       └── client.py        # Spotify Web API wrapper
-├── docs/
-│   ├── ПМИ.md               # Программа и методика испытаний (Markdown)
-│   ├── build_pmi_docx.py    # Сборка .docx из примера ИУ5Ц-102Б
-│   └── ИУ5-82Б_Пронченко_Т_А_ПМИ.docx
-├── .env.example
-├── requirements.txt
-├── requirements-dev.txt     # python-docx (только для сборки документации)
-├── README.md
-└── users.db                 # SQLite БД (создаётся автоматически)
+app/
+├── main.py              # FastAPI + Telegram-бот, Mini App API (Depends)
+├── bot.py               # Хендлеры, inline-кнопки, AI-флоу с предпросмотром
+├── config.py            # Pydantic Settings (.env)
+├── logging_config.py    # Логирование: консоль + ротация файла
+├── webapp_auth.py       # Валидация Telegram initData (HMAC-SHA256)
+├── prompt.txt           # Системный промпт для DeepSeek
+├── ai/
+│   └── deepseek.py      # DeepSeek API, JSON/markdown парсинг ответа
+├── spotify/
+│   ├── oauth.py         # OAuth 2.0 PKCE, state + TTL
+│   └── client.py        # Spotify Web API (параллельный поиск через asyncio.gather)
+├── storage/
+│   └── db.py            # SQLite WAL: users, playlists, индексы
+└── miniapp/
+    ├── index.html       # Telegram Mini App UI
+    ├── style.css        # Стили (Telegram theme variables)
+    ├── app.js           # Логика, навигация, debounce
+    └── api.js           # Fetch-обёртка с timeout (AbortController)
 ```
 
-## 🔐 Безопасность (для продакшена)
+## Troubleshooting
 
-⚠️ **Текущая версия — только для локального демо!**
+| Проблема | Решение |
+|----------|---------|
+| Таймауты запросов к Spotify | Включить VPN (РФ) |
+| `redirect_uri_mismatch` | Проверить URI в Spotify Dashboard и `.env` (должны совпадать) |
+| `state expired` | State живёт 10 мин — повторить `/connect` |
+| `401 Unauthorized` | Токен обновляется автоматически; если нет — `/disconnect` + `/connect` |
+| Mini App белый экран | Прописать домен в BotFather -> Configure Mini App |
+| `database is locked` | Включён WAL mode; если повторяется — перезапустить сервис |
+| Кнопка Mini App не появляется | `BASE_URL` должен начинаться с `https://` |
 
-Для продакшена необходимо:
-- Шифровать токены в БД
-- Использовать HTTPS и реальный домен
-- Добавить rate limiting
-- Валидацию входных данных
-- Логирование и мониторинг
-- Обработку edge cases
+## Технические решения
 
-## 📝 Лицензия
+- **Параллельный поиск** — `asyncio.gather` для 20 треков одновременно (~1с вместо ~10с)
+- **FastAPI Depends()** — DI для авторизации во всех API-эндпоинтах
+- **PKCE без client secret** — безопасная OAuth авторизация для публичных клиентов
+- **HMAC-SHA256 валидация** — проверка подлинности Telegram Mini App запросов
+- **Lazy cleanup** — протухшие PKCE state автоматически чистятся
+- **SQLite WAL** — журнал предзаписи для конкурентного доступа
+- **AbortController** — 30с timeout на все fetch-запросы в Mini App
 
-Проект создан для дипломной работы (MVP-демонстрация).
+## Лицензия
+
+Проект создан для дипломной работы (ВКР). МГТУ им. Баумана, кафедра ИУ5.

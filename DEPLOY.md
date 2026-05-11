@@ -1,82 +1,157 @@
-# Инструкция по загрузке на GitHub
+# Деплой на VPS
 
-## Шаг 1: Инициализация Git репозитория
+Инструкция по развёртыванию CatchTheWave на удалённом сервере с HTTPS.
+
+## Требования к серверу
+
+- Ubuntu 20.04+ (или Debian)
+- Python 3.11+
+- nginx
+- Доменное имя (например через DuckDNS)
+
+## 1. Подготовка сервера
 
 ```bash
-cd /Users/timmetim/Desktop/VKR
-git init
+apt update && apt install -y python3 python3-venv python3-pip nginx certbot python3-certbot-nginx
 ```
 
-## Шаг 2: Добавить файлы в staging
+## 2. Загрузка проекта
 
 ```bash
-git add .
+mkdir -p /opt/catchthewave
+# Скопировать файлы на сервер:
+scp -r app/ requirements.txt Makefile .env user@SERVER:/opt/catchthewave/
 ```
 
-## Шаг 3: Создать первый коммит
-
+Или через git:
 ```bash
-git commit -m "Initial commit: Telegram → Spotify Playlist MVP"
+cd /opt/catchthewave
+git clone https://github.com/timpronchenko/get_your_wave.git .
+cp .env.example .env
+# Заполнить .env
 ```
 
-## Шаг 4: Создать репозиторий на GitHub
-
-1. Перейти на https://github.com
-2. Нажать кнопку **"New"** (или **"+"** → **"New repository"**)
-3. Заполнить:
-   - **Repository name**: `telegram-spotify-playlist` (или любое другое имя)
-   - **Description**: "MVP Telegram бот для создания Spotify плейлистов"
-   - **Visibility**: Public или Private (на ваше усмотрение)
-   - **НЕ** ставить галочки на "Add a README file", "Add .gitignore", "Choose a license" (всё уже есть)
-4. Нажать **"Create repository"**
-
-## Шаг 5: Подключить удалённый репозиторий и запушить
-
-GitHub покажет инструкции, но вот команды:
+## 3. Установка зависимостей
 
 ```bash
-# Заменить YOUR_USERNAME на ваш GitHub username
-git remote add origin https://github.com/YOUR_USERNAME/telegram-spotify-playlist.git
-
-# Переименовать ветку в main (если нужно)
-git branch -M main
-
-# Отправить код на GitHub
-git push -u origin main
+cd /opt/catchthewave
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
 ```
 
-Если GitHub попросит авторизацию:
-- Используйте **Personal Access Token** (не пароль)
-- Создать токен: Settings → Developer settings → Personal access tokens → Tokens (classic)
-- Права: `repo` (полный доступ к репозиториям)
+## 4. Настройка .env
 
-## Альтернатива: через SSH
-
-Если настроен SSH ключ:
-
-```bash
-git remote add origin git@github.com:YOUR_USERNAME/telegram-spotify-playlist.git
-git branch -M main
-git push -u origin main
+```env
+TELEGRAM_BOT_TOKEN=...
+SPOTIFY_CLIENT_ID=...
+SPOTIFY_REDIRECT_URI=https://YOUR_DOMAIN/callback
+BASE_URL=https://YOUR_DOMAIN
+DEEPSEEK_API_KEY=...
 ```
 
-## Проверка
+## 5. Настройка nginx
 
-После успешного push:
-- Откройте репозиторий на GitHub
-- Убедитесь, что все файлы загружены
-- `.env` и `users.db` должны быть в `.gitignore` (не загружаются)
+Создать `/etc/nginx/sites-available/catchthewave`:
 
-## Важно!
+```nginx
+server {
+    server_name YOUR_DOMAIN;
 
-⚠️ **НЕ коммитьте `.env` файл!** Он уже в `.gitignore`, но проверьте:
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
 
-```bash
-git status
+    listen 80;
+}
 ```
 
-Если `.env` показывается как untracked (но не staged) — всё ок. Если он в staged — удалите:
+```bash
+ln -s /etc/nginx/sites-available/catchthewave /etc/nginx/sites-enabled/
+nginx -t && systemctl reload nginx
+```
+
+## 6. SSL-сертификат (Let's Encrypt)
 
 ```bash
-git reset HEAD .env
+certbot --nginx -d YOUR_DOMAIN
+```
+
+Certbot автоматически настроит HTTPS и редирект с HTTP.
+
+## 7. Systemd-сервис
+
+Создать `/etc/systemd/system/catchthewave.service`:
+
+```ini
+[Unit]
+Description=CatchTheWave Bot
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/catchthewave
+ExecStart=/opt/catchthewave/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+systemctl daemon-reload
+systemctl enable catchthewave
+systemctl start catchthewave
+```
+
+## 8. Проверка
+
+```bash
+systemctl status catchthewave          # active (running)
+curl http://127.0.0.1:8000/health      # {"status":"ok"}
+curl https://YOUR_DOMAIN/health        # {"status":"ok"}
+curl https://YOUR_DOMAIN/miniapp/      # HTML Mini App
+```
+
+## 9. Настройка BotFather
+
+Для работы Mini App кнопки в Telegram:
+1. Написать @BotFather
+2. `/mybots` -> выбрать бота -> Bot Settings -> Configure Mini App
+3. Указать URL: `https://YOUR_DOMAIN/miniapp/`
+
+## Обновление
+
+```bash
+# С локальной машины:
+scp -i ~/.ssh/KEY app/*.py app/ai/*.py app/spotify/*.py app/storage/*.py app/miniapp/* root@SERVER:/opt/catchthewave/app/
+
+# На сервере:
+systemctl restart catchthewave
+```
+
+## Мониторинг
+
+```bash
+# Логи сервиса
+journalctl -u catchthewave -f
+
+# Логи приложения
+tail -f /opt/catchthewave/app.log
+
+# Статус
+systemctl status catchthewave
+```
+
+## Полезные команды
+
+```bash
+systemctl restart catchthewave   # перезапуск
+systemctl stop catchthewave      # остановка
+certbot renew                    # обновление SSL (автоматически по cron)
 ```
