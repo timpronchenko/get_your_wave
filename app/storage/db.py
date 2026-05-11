@@ -1,7 +1,7 @@
 """SQLite хранилище для токенов пользователей и истории плейлистов."""
 import sqlite3
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
 from pathlib import Path
 
@@ -13,6 +13,7 @@ DB_PATH = Path(__file__).parent.parent.parent / "users.db"
 def init_db():
     """Инициализировать БД: таблицы users и playlists."""
     conn = sqlite3.connect(DB_PATH)
+    conn.execute("PRAGMA journal_mode=WAL")
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -43,6 +44,10 @@ def init_db():
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_playlists_user_created
         ON playlists(telegram_user_id, created_at DESC)
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_playlists_spotify_pid
+        ON playlists(spotify_playlist_id)
     """)
 
     conn.commit()
@@ -79,8 +84,8 @@ def save_user(
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
-    now = datetime.utcnow().isoformat()
-    
+    now = datetime.now(timezone.utc).isoformat()
+
     cursor.execute("""
         INSERT INTO users (
             telegram_user_id, spotify_user_id, access_token,
@@ -110,7 +115,7 @@ def update_tokens(
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     if refresh_token:
         cursor.execute("""
@@ -161,7 +166,7 @@ def add_playlist(
     """Записать факт создания плейлиста в историю. Возвращает id строки."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     cursor.execute(
         """
         INSERT INTO playlists (

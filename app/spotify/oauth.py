@@ -43,6 +43,12 @@ def create_state(telegram_user_id: int) -> str:
         'created_at': time.time(),
     }
 
+    # Lazy cleanup: удаляем протухшие записи
+    cutoff = time.time() - _STATE_TTL
+    expired = [k for k, v in _pkce_store.items() if v['created_at'] < cutoff]
+    for k in expired:
+        del _pkce_store[k]
+
     logger.info("Сгенерирован state для telegram_user_id=%s", telegram_user_id)
     return state
 

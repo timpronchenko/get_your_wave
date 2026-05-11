@@ -1,4 +1,5 @@
 """HTTP клиент для Spotify Web API."""
+import asyncio
 import logging
 import re
 import time
@@ -169,7 +170,7 @@ async def ensure_valid_token(telegram_user_id: int) -> Optional[str]:
 
 async def get_me(access_token: str) -> Optional[Dict]:
     """Получить информацию о текущем пользователе."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT) as client:
         try:
             response = await client.get(
                 f"{SPOTIFY_API_BASE}/me",
@@ -225,7 +226,7 @@ async def get_top_tracks(access_token: str, limit: int = 20) -> List[Dict]:
 
 async def create_playlist(access_token: str, user_id: str, name: str, public: bool = False) -> Optional[Dict]:
     """Создать плейлист."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT) as client:
         try:
             response = await client.post(
                 f"{SPOTIFY_API_BASE}/users/{user_id}/playlists",
@@ -474,13 +475,19 @@ async def resolve_ai_tracks_to_uris(
     if not me:
         return [], len(ai_tracks), "Не удалось получить профиль Spotify."
 
-    resolved: List[Dict[str, str]] = []
-    seen: set[str] = set()
+    queries = []
     for item in ai_tracks:
         query = f"{item.get('artist', '')} {item.get('title', '')}".strip()
-        if not query:
-            continue
-        found = await search_first_track(access_token, query, limit=1)
+        if query:
+            queries.append(query)
+
+    results = await asyncio.gather(
+        *(search_first_track(access_token, q, limit=1) for q in queries)
+    )
+
+    resolved: List[Dict[str, str]] = []
+    seen: set[str] = set()
+    for found in results:
         if not found or found["uri"] in seen:
             continue
         seen.add(found["uri"])

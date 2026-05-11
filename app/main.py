@@ -4,7 +4,7 @@ import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request, HTTPException, Header
+from fastapi import FastAPI, Request, HTTPException, Header, Depends
 from fastapi.responses import HTMLResponse, Response, JSONResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
@@ -17,7 +17,6 @@ from app.config import settings
 from app.storage import db
 from app.spotify import oauth
 from app.spotify import client as spotify_client
-from app.spotify.client import get_me
 from app.ai.deepseek import generate_playlist
 from app.webapp_auth import validate_init_data
 from app.bot import _register_handlers
@@ -189,8 +188,7 @@ def _require_user(x_telegram_init_data: str = Header(None)) -> int:
 
 
 @app.get("/api/me")
-async def api_me(x_telegram_init_data: str = Header(None)):
-    uid = _require_user(x_telegram_init_data)
+async def api_me(uid: int = Depends(_require_user)):
     user = db.get_user(uid)
     if not user:
         return {"connected": False}
@@ -202,15 +200,13 @@ async def api_me(x_telegram_init_data: str = Header(None)):
 
 
 @app.get("/api/history")
-async def api_history(x_telegram_init_data: str = Header(None)):
-    uid = _require_user(x_telegram_init_data)
+async def api_history(uid: int = Depends(_require_user)):
     items = db.list_playlists(uid, limit=20)
     return {"playlists": items}
 
 
 @app.post("/api/generate")
-async def api_generate(request: Request, x_telegram_init_data: str = Header(None)):
-    uid = _require_user(x_telegram_init_data)
+async def api_generate(request: Request, uid: int = Depends(_require_user)):
     body = await request.json()
     prompt = body.get("prompt", "").strip()
     if not prompt:
@@ -231,8 +227,7 @@ async def api_generate(request: Request, x_telegram_init_data: str = Header(None
 
 
 @app.post("/api/create-playlist")
-async def api_create_playlist(request: Request, x_telegram_init_data: str = Header(None)):
-    uid = _require_user(x_telegram_init_data)
+async def api_create_playlist(request: Request, uid: int = Depends(_require_user)):
     body = await request.json()
     uris = body.get("uris", [])
     name = body.get("name", "CatchTheWave Playlist")
@@ -251,8 +246,7 @@ async def api_create_playlist(request: Request, x_telegram_init_data: str = Head
 
 
 @app.get("/api/top20")
-async def api_top20(x_telegram_init_data: str = Header(None)):
-    uid = _require_user(x_telegram_init_data)
+async def api_top20(uid: int = Depends(_require_user)):
     access_token = await spotify_client.ensure_valid_token(uid)
     if not access_token:
         raise HTTPException(status_code=403, detail="Spotify not connected")
@@ -261,8 +255,7 @@ async def api_top20(x_telegram_init_data: str = Header(None)):
 
 
 @app.post("/api/search")
-async def api_search(request: Request, x_telegram_init_data: str = Header(None)):
-    uid = _require_user(x_telegram_init_data)
+async def api_search(request: Request, uid: int = Depends(_require_user)):
     body = await request.json()
     query = body.get("query", "").strip()
     if not query:
@@ -277,15 +270,13 @@ async def api_search(request: Request, x_telegram_init_data: str = Header(None))
 
 
 @app.post("/api/disconnect")
-async def api_disconnect(x_telegram_init_data: str = Header(None)):
-    uid = _require_user(x_telegram_init_data)
+async def api_disconnect(uid: int = Depends(_require_user)):
     db.delete_user(uid)
     return {"ok": True}
 
 
 @app.post("/api/add-to-playlist")
-async def api_add_to_playlist(request: Request, x_telegram_init_data: str = Header(None)):
-    uid = _require_user(x_telegram_init_data)
+async def api_add_to_playlist(request: Request, uid: int = Depends(_require_user)):
     body = await request.json()
     spotify_playlist_id = body.get("spotify_playlist_id", "").strip()
     uris = body.get("uris", [])
@@ -306,8 +297,7 @@ async def api_add_to_playlist(request: Request, x_telegram_init_data: str = Head
 
 
 @app.delete("/api/playlist/{playlist_id}")
-async def api_delete_playlist(playlist_id: int, x_telegram_init_data: str = Header(None)):
-    uid = _require_user(x_telegram_init_data)
+async def api_delete_playlist(playlist_id: int, uid: int = Depends(_require_user)):
     playlist = db.get_playlist(playlist_id)
     if not playlist:
         raise HTTPException(status_code=404, detail="Playlist not found")
@@ -325,8 +315,7 @@ async def api_delete_playlist(playlist_id: int, x_telegram_init_data: str = Head
 
 
 @app.get("/api/connect-url")
-async def api_connect_url(x_telegram_init_data: str = Header(None)):
-    uid = _require_user(x_telegram_init_data)
+async def api_connect_url(uid: int = Depends(_require_user)):
     auth_url = oauth.get_authorization_url(uid)
     return {"url": auth_url}
 

@@ -48,11 +48,13 @@ const App = (() => {
 
   /* ── Toast ─────────────────────────────────────────── */
 
+  let _toastTimer = null;
   function toast(msg, duration = 3000) {
     const el = document.getElementById("toast");
     el.textContent = msg;
     el.classList.add("show");
-    setTimeout(() => el.classList.remove("show"), duration);
+    if (_toastTimer) clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => { el.classList.remove("show"); _toastTimer = null; }, duration);
   }
 
   /* ── Home ──────────────────────────────────────────── */
@@ -146,23 +148,28 @@ const App = (() => {
     }
   }
 
+  let _generating = false;
   async function generatePlaylist() {
+    if (_generating) return;
     const promptEl = document.getElementById("ai-prompt");
     const prompt = promptEl.value.trim();
     if (!prompt) { toast("Enter a description"); return; }
 
+    _generating = true;
     showAiLoading(true);
     hideEl("ai-preview");
 
     try {
       const data = await API.generate(prompt);
-      if (data.error) { toast(data.error); showAiLoading(false); return; }
+      if (data.error) { toast(data.error); showAiLoading(false); showEl("ai-input-section"); _generating = false; return; }
       aiPreview = { tracks: data.tracks, total: data.total, prompt: data.prompt || prompt };
       renderAiPreview();
     } catch (e) {
       toast("Error: " + e.message);
+      showEl("ai-input-section");
     }
     showAiLoading(false);
+    _generating = false;
   }
 
   function renderAiPreview() {
@@ -253,11 +260,14 @@ const App = (() => {
 
   /* ── Search / Add Song ─────────────────────────────── */
 
+  let _searching = false;
   async function searchTrack() {
+    if (_searching) return;
     const input = document.getElementById("search-input");
     const query = input.value.trim();
     if (!query) return;
 
+    _searching = true;
     showEl("search-loading");
     hideEl("search-results");
     hideEl("search-preview");
@@ -285,6 +295,7 @@ const App = (() => {
       hideEl("search-loading");
       toast("Error: " + e.message);
     }
+    _searching = false;
   }
 
   function selectTrack(track) {

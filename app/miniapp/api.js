@@ -6,17 +6,23 @@ const API = (() => {
   const initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || "";
 
   async function request(url, options = {}) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     const headers = {
       "Content-Type": "application/json",
       "X-Telegram-Init-Data": initData,
       ...(options.headers || {}),
     };
-    const resp = await fetch(url, { ...options, headers });
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
-      throw new Error(err.detail || "Request failed");
+    try {
+      const resp = await fetch(url, { ...options, headers, signal: controller.signal });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+        throw new Error(err.detail || "Request failed");
+      }
+      return resp.json();
+    } finally {
+      clearTimeout(timeoutId);
     }
-    return resp.json();
   }
 
   return {

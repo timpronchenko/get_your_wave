@@ -12,7 +12,7 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions"
-DEEPSEEK_MODEL = "deepseek-chat"
+DEEPSEEK_MODEL = "deepseek-v4-pro"
 
 _PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompt.txt"
 _SYSTEM_PROMPT: str = _PROMPT_PATH.read_text(encoding="utf-8").strip()

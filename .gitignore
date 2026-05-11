@@ -1,6 +1,9 @@
 # Environment variables
 .env
 
+# Logs
+*.log
+
 # Database
 *.db
 *.sqlite
